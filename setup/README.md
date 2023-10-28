@@ -1,6 +1,7 @@
 # 追加したインストール手順
 
 * Container RegistryではなくArtifact Registryを使用するように変更
+* terraformをdockerコンテナーで実行するように変更(see: /terraform/makefile)
 
 ### Artifact Registryのリポジトリをdashboardとevent-handler、parsers向けに作成します
 
@@ -29,6 +30,12 @@ gcloud artifacts repositories create github-parser --repository-format=docker --
 - gcloud builds submit bq-workers --config=bq-workers/parsers.cloudbuild.yaml --project $PROJECT_ID --substitutions=_SERVICE=github
 + gcloud builds submit bq-workers --config=bq-workers/parsers.cloudbuild.yaml --project $PROJECT_ID --substitutions=_SERVICE=github,_REGION=$GAR_REGION
 ```
+
+### terraformの実行手順を以下のように変更します
+
+* `terraform init` → `make init`
+* `terraform plan` → `make plan`
+* `terraform apply` → `make apply`
 
 -----
 
