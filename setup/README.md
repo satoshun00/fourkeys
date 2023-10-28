@@ -1,3 +1,37 @@
+# 追加したインストール手順
+
+* Container RegistryではなくArtifact Registryを使用するように変更
+
+### Artifact Registryのリポジトリをdashboardとevent-handler、parsers向けに作成します
+
+```sh
+export GAR_REGION=asia-northeast1
+
+gcloud artifacts repositories create dashboard --repository-format=docker --location=$GAR_REGION --project $PROJECT_ID && \
+gcloud artifacts repositories create event-handler --repository-format=docker --location=$GAR_REGION --project $PROJECT_ID && \
+gcloud artifacts repositories create github-parser --repository-format=docker --location=$GAR_REGION --project $PROJECT_ID
+```
+
+### `gcloud builds submit` でArtifact Registryのregionを指定するように変更します
+
+```diff
++ export GAR_REGION=asia-northeast1
+
+- gcloud builds submit dashboard --config=dashboard/cloudbuild.yaml --project $PROJECT_ID && \
+- gcloud builds submit event-handler --config=event-handler/cloudbuild.yaml --project $PROJECT_ID
++ gcloud builds submit dashboard --config=dashboard/cloudbuild.yaml --project $PROJECT_ID --substitutions=_REGION=$GAR_REGION && \
++ gcloud builds submit event-handler --config=event-handler/cloudbuild.yaml --project $PROJECT_ID --substitutions=_REGION=$GAR_REGION
+```
+
+```diff
++ export GAR_REGION=asia-northeast1
+
+- gcloud builds submit bq-workers --config=bq-workers/parsers.cloudbuild.yaml --project $PROJECT_ID --substitutions=_SERVICE=github
++ gcloud builds submit bq-workers --config=bq-workers/parsers.cloudbuild.yaml --project $PROJECT_ID --substitutions=_SERVICE=github,_REGION=$GAR_REGION
+```
+
+-----
+
 # Installation guide
 This guide describes how to set up Four Keys with your GitHub or GitLab project. The main steps are:
 

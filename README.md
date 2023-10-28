@@ -1,3 +1,11 @@
+# このリポジトリは[dora-team/fourkeys](https://github.com/dora-team/fourkeys)のフォークです
+
+オリジナルのfourkeysリポジトリから改変を加えています。
+
+* Container RegistryではなくArtifact Registryを使用するように変更
+
+----
+
 ![Four Keys](images/fourkeys_wide.svg)
 
 [![Four Keys YouTube Video](images/youtube-screenshot.png)](https://www.youtube.com/watch?v=2rzvIL29Nz0 "Measuring Devops: The Four Keys Project")
