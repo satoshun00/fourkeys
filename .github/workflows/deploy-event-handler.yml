@@ -1,0 +1,36 @@
+name: 🚀 Deploy event-handler
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'event-handler/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v3
+      - id: auth
+        name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ vars.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v1
+
+      - run: |
+            gcloud builds submit event-handler \
+                --config=event-handler/cloudbuild.yaml \
+                --project ${{ vars.PROJECT_ID }} \
+                --substitutions=_REGION=${{ vars.GAR_REGION }}
+
+      - run: |
+            gcloud run deploy event-handler \
+                --image=${{ vars.GAR_REGION }}-docker.pkg.dev/${{ vars.PROJECT_ID }}/event-handler/handler \
+                --region=${{ vars.RUN_REGION }}

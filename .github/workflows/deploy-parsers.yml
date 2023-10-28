@@ -1,0 +1,39 @@
+name: 🚀 Deploy parsers
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'bq-workers/**'
+
+jobs:
+  deploy:
+    strategy:
+      matrix:
+        parser: ["github"]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v3
+      - id: auth
+        name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ vars.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v1
+
+      - run: |
+            gcloud builds submit bq-workers \
+                --config=bq-workers/parsers.cloudbuild.yaml \
+                --project ${{ vars.PROJECT_ID }} \
+                --substitutions=_SERVICE=${{ matrix.parser }},_REGION=${{ vars.GAR_REGION }}
+
+      - run: |
+            gcloud run deploy fourkeys-${{ matrix.parser }}-parser \
+                --image=${{ vars.GAR_REGION }}-docker.pkg.dev/${{ vars.PROJECT_ID }}/${{ matrix.parser }}-parser/parser \
+                --region=${{ vars.RUN_REGION }}
