@@ -47,3 +47,8 @@ variable "parser_container_urls" {
   description = "URL for the parser container images. e.g: {'github': 'gcr.io/youproject/github-parser', 'gitlab': 'gcr.io/youproject/gitlab-parser'} "
   default     = {}
 }
+
+variable "forkeys_repo" {
+  type        = string
+  description = "Path for the forkeys repo. (e.g. org/repo)"
+}
