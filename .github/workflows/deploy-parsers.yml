@@ -1,11 +1,14 @@
 name: 🚀 Deploy parsers
 
 on:
-  push:
+  pull_request:
     branches:
       - main
-    paths:
-      - 'bq-workers/**'
+  # push:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - 'bq-workers/**'
 
 jobs:
   deploy:
@@ -30,10 +33,10 @@ jobs:
       - run: |
             gcloud builds submit bq-workers \
                 --config=bq-workers/parsers.cloudbuild.yaml \
-                --project ${{ var.PROJECT_ID }} \
-                --substitutions=_SERVICE=${{ matrix.parser }},_REGION=${{ var.GAR_REGION }}
+                --project ${{ vars.PROJECT_ID }} \
+                --substitutions=_SERVICE=${{ matrix.parser }},_REGION=${{ vars.GAR_REGION }}
 
       - run: |
             gcloud run deploy fourkeys-${{ matrix.parser }}-parser \
-                --image=${{ var.GAR_REGION }}-docker.pkg.dev/${{ var.PROJECT_ID }}/${{ matrix.parser }}-parser/parser \
-                --region=${{ var.RUN_REGION }}
+                --image=${{ vars.GAR_REGION }}-docker.pkg.dev/${{ vars.PROJECT_ID }}/${{ matrix.parser }}-parser/parser \
+                --region=${{ vars.RUN_REGION }}

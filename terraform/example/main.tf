@@ -14,7 +14,10 @@ module "github_actions_runner" {
   account_id  = "github-actions-runner"
   description = "Github Actionsのスクリプト上で使用する、デプロイメントユーザー(terraform管理)"
   roles = [
-    "roles/cloudbuild.builds.builder"
+    "roles/cloudbuild.builds.builder",
+    "roles/iam.serviceAccountUser",
+    "roles/run.developer",
+    "roles/viewer"
   ]
 }
 
