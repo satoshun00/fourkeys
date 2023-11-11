@@ -1,6 +1,7 @@
 # Incidents Table
 SELECT
 source,
+repo,
 incident_id,
 MIN(IF(root.time_created < issue.time_created, root.time_created, issue.time_created)) as time_created,
 MAX(time_resolved) as time_resolved,
@@ -9,6 +10,13 @@ FROM
 (
 SELECT 
 source,
+CASE
+     WHEN source LIKE 'github%' OR (source LIKE 'gitlab%' AND REGEXP_CONTAINS(LOWER(metadata), r'repository')) 
+          THEN JSON_EXTRACT_SCALAR(metadata, '$.repository.name')
+     WHEN source LIKE 'gitlab%'
+          THEN JSON_EXTRACT_SCALAR(metadata, '$.project.name')
+     ELSE 'unknown'
+     END AS repo,
 CASE WHEN source LIKE "github%" THEN JSON_EXTRACT_SCALAR(metadata, '$.issue.number')
      WHEN source LIKE "gitlab%" AND event_type = "note" THEN JSON_EXTRACT_SCALAR(metadata, '$.object_attributes.noteable_id')
      WHEN source LIKE "gitlab%" AND event_type = "issue" THEN JSON_EXTRACT_SCALAR(metadata, '$.object_attributes.id')
@@ -31,6 +39,6 @@ FROM four_keys.events_raw
 WHERE event_type LIKE "issue%" OR event_type LIKE "incident%" OR (event_type = "note" and JSON_EXTRACT_SCALAR(metadata, '$.object_attributes.noteable_type') = 'Issue')
 ) issue
 LEFT JOIN (SELECT time_created, changes FROM four_keys.deployments d, d.changes) root on root.changes = root_cause
-GROUP BY 1,2
+GROUP BY 1,2,3
 HAVING max(bug) is True
 ;

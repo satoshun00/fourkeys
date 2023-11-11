@@ -5,6 +5,18 @@ WITH deploys_cloudbuild_github_gitlab AS (# Cloud Build, Github, Gitlab pipeline
       source,
       id as deploy_id,
       time_created,
+      CASE
+          WHEN source LIKE 'github%' OR (source LIKE 'gitlab%' AND REGEXP_CONTAINS(LOWER(metadata), r'repository')) 
+            THEN JSON_EXTRACT_SCALAR(metadata, '$.repository.name')
+          WHEN source LIKE 'gitlab%'
+            THEN JSON_EXTRACT_SCALAR(metadata, '$.project.name')
+          ELSE 'unknown'
+      END AS repo,
+      CASE
+          WHEN source LIKE 'github%'
+            THEN JSON_EXTRACT_SCALAR(metadata, '$.deployment.environment')
+          ELSE 'unknown'
+      END AS env,
       CASE WHEN source = "cloud_build" then JSON_EXTRACT_SCALAR(metadata, '$.substitutions.COMMIT_SHA')
            WHEN source like "github%" then JSON_EXTRACT_SCALAR(metadata, '$.deployment.sha')
            WHEN source like "gitlab%" then COALESCE(
@@ -18,7 +30,7 @@ WITH deploys_cloudbuild_github_gitlab AS (# Cloud Build, Github, Gitlab pipeline
            WHEN source = "argocd" then JSON_EXTRACT_SCALAR(metadata, '$.commit_sha') end as main_commit,
       CASE WHEN source LIKE "github%" THEN ARRAY(
                 SELECT JSON_EXTRACT_SCALAR(string_element, '$')
-                FROM UNNEST(JSON_EXTRACT_ARRAY(metadata, '$.deployment.additional_sha')) AS string_element)
+                FROM UNNEST(JSON_EXTRACT_ARRAY(JSON_EXTRACT_SCALAR(metadata, '$.deployment.payload'), '$.additional_sha')) AS string_element)
            ELSE ARRAY<string>[] end as additional_commits
       FROM four_keys.events_raw 
       WHERE (
@@ -39,6 +51,8 @@ WITH deploys_cloudbuild_github_gitlab AS (# Cloud Build, Github, Gitlab pipeline
       source,
       id as deploy_id,
       time_created,
+      "unknown" as repo,
+      "unknown" as env,
       IF(JSON_EXTRACT_SCALAR(param, '$.name') = "gitrevision", JSON_EXTRACT_SCALAR(param, '$.value'), Null) as main_commit,
       ARRAY<string>[] AS additional_commits
       FROM (
@@ -56,6 +70,8 @@ WITH deploys_cloudbuild_github_gitlab AS (# Cloud Build, Github, Gitlab pipeline
       source,
       id AS deploy_id,
       time_created,
+      "unknown" as repo,
+      "unknown" as env,
       JSON_EXTRACT_SCALAR(metadata, '$.pipeline.vcs.revision') AS main_commit,
       ARRAY<string>[] AS additional_commits
       FROM four_keys.events_raw
@@ -78,6 +94,8 @@ WITH deploys_cloudbuild_github_gitlab AS (# Cloud Build, Github, Gitlab pipeline
     deployment_changes as (
       SELECT
       source,
+      repo,
+      env,
       deploy_id,
       deploys.time_created time_created,
       change_metadata,
@@ -90,13 +108,14 @@ WITH deploys_cloudbuild_github_gitlab AS (# Cloud Build, Github, Gitlab pipeline
           or changes_raw.id in unnest(deploys.additional_commits)
         )
     )
-
     SELECT 
     source,
+    repo,
+    env,
     deploy_id,
     time_created,
     main_commit,   
     ARRAY_AGG(DISTINCT JSON_EXTRACT_SCALAR(array_commits, '$.id')) changes,    
     FROM deployment_changes
     CROSS JOIN deployment_changes.array_commits
-    GROUP BY 1,2,3,4;
+    GROUP BY 1,2,3,4,5,6;
