@@ -33,12 +33,14 @@
         "type": "grafana-bigquery-datasource",
         "uid": "P8042CABD7873BED6"
       },
+      "description": "commit から本番環境稼働までの所要時間",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "Hours",
@@ -52,6 +54,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -115,7 +118,7 @@
           "location": "US",
           "project": "gglobo-deployment-frq-hdg-prd",
           "rawQuery": true,
-          "rawSql": "SELECT\n day,\n IFNULL(ANY_VALUE(med_time_to_change)/60, 0) AS median_time_to_change, # Hours\nFROM (\n SELECT\n  d.deploy_id,\n  TIMESTAMP_TRUNC(d.time_created, DAY) AS day,\n  PERCENTILE_CONT(\n  IF(TIMESTAMP_DIFF(d.time_created, c.time_created, MINUTE) > 0, TIMESTAMP_DIFF(d.time_created, c.time_created, MINUTE), NULL), # Ignore automated pushes\n  0.5) # Median\n  OVER (PARTITION BY TIMESTAMP_TRUNC(d.time_created, DAY)) AS med_time_to_change, # Minutes\n FROM four_keys.deployments d, d.changes\n LEFT JOIN four_keys.changes c ON changes = c.change_id\n)\nGROUP BY day\nORDER BY day",
+          "rawSql": "SELECT\n day,\n IFNULL(ANY_VALUE(med_time_to_change)/60, 0) AS median_time_to_change, # Hours\nFROM (\n SELECT\n  d.deploy_id,\n  TIMESTAMP_TRUNC(d.time_created, DAY) AS day,\n  PERCENTILE_CONT(\n  IF(TIMESTAMP_DIFF(d.time_created, c.time_created, MINUTE) > 0, TIMESTAMP_DIFF(d.time_created, c.time_created, MINUTE), NULL), # Ignore automated pushes\n  0.5) # Median\n  OVER (PARTITION BY TIMESTAMP_TRUNC(d.time_created, DAY)) AS med_time_to_change, # Minutes\n FROM four_keys.deployments d, d.changes\n LEFT JOIN four_keys.changes c ON changes = c.change_id\n WHERE d.env IN (${environment:doublequote}) AND d.repo IN (${repository:doublequote})\n)\nGROUP BY day\nORDER BY day",
           "refId": "A",
           "sql": {
             "columns": [
@@ -136,7 +139,7 @@
           }
         }
       ],
-      "title": "Lead Time for Changes",
+      "title": "変更のリードタイム",
       "type": "timeseries"
     },
     {
@@ -144,7 +147,7 @@
         "type": "grafana-bigquery-datasource",
         "uid": "P8042CABD7873BED6"
       },
-      "description": "",
+      "description": "commit から本番環境稼働までの所要時間",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -210,7 +213,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "9.3.1",
+      "pluginVersion": "10.2.0",
       "targets": [
         {
           "datasource": {
@@ -222,7 +225,7 @@
           "location": "US",
           "project": "gglobo-deployment-frq-hdg-prd",
           "rawQuery": true,
-          "rawSql": "SELECT \n CASE\n  WHEN median_time_to_change < 24 * 60 then \"One day\"\n  WHEN median_time_to_change < 168 * 60 then \"One week\"\n  WHEN median_time_to_change < 730 * 60 then \"One month\"\n  WHEN median_time_to_change < 730 * 6 * 60 then \"Six months\"\n  ELSE \"One year\"\n END as lead_time_to_change\nFROM (\n SElECT\n  IFNULL(ANY_VALUE(med_time_to_change), 0) AS median_time_to_change\n FROM (\n   SELECT\n   PERCENTILE_CONT(\n    IF(TIMESTAMP_DIFF(d.time_created, c.time_created, MINUTE) > 0, TIMESTAMP_DIFF(d.time_created, c.time_created, MINUTE), NULL), # Ignore automated pushes\n    0.5) # Median\n    OVER () AS med_time_to_change, # Minutes\n  FROM four_keys.deployments d, d.changes\n  LEFT JOIN four_keys.changes c ON changes = c.change_id\n  WHERE d.time_created > TIMESTAMP(DATE_SUB(CURRENT_DATE(), INTERVAL 3 MONTH))\n )\n)",
+          "rawSql": "SELECT \n CASE\n  WHEN median_time_to_change < 24 * 60 then \"One day\"\n  WHEN median_time_to_change < 168 * 60 then \"One week\"\n  WHEN median_time_to_change < 730 * 60 then \"One month\"\n  WHEN median_time_to_change < 730 * 6 * 60 then \"Six months\"\n  ELSE \"One year\"\n END as lead_time_to_change\nFROM (\n SElECT\n  IFNULL(ANY_VALUE(med_time_to_change), 0) AS median_time_to_change\n FROM (\n   SELECT\n   PERCENTILE_CONT(\n    IF(TIMESTAMP_DIFF(d.time_created, c.time_created, MINUTE) > 0, TIMESTAMP_DIFF(d.time_created, c.time_created, MINUTE), NULL), # Ignore automated pushes\n    0.5) # Median\n    OVER () AS med_time_to_change, # Minutes\n  FROM four_keys.deployments d, d.changes\n  LEFT JOIN four_keys.changes c ON changes = c.change_id\n  WHERE d.time_created > TIMESTAMP(DATE_SUB(CURRENT_DATE(), INTERVAL 3 MONTH))\n  AND d.env IN (${environment:doublequote})\n  AND d.repo IN (${repository:doublequote})\n )\n)",
           "refId": "A",
           "sql": {
             "columns": [
@@ -243,7 +246,7 @@
           }
         }
       ],
-      "title": "Lead Time to Change Bucket",
+      "title": "変更のリードタイム(中央値)",
       "type": "stat"
     },
     {
@@ -257,8 +260,10 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
+            "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "bars",
@@ -269,6 +274,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -333,7 +339,7 @@
           "location": "US",
           "project": "gglobo-deployment-frq-hdg-prd",
           "rawQuery": true,
-          "rawSql": "SELECT\nTIMESTAMP_TRUNC(time_created, DAY) AS day,\nCOUNT(distinct deploy_id) AS deployments\nFROM\nfour_keys.deployments\nGROUP BY day\nORDER BY day",
+          "rawSql": "SELECT\nTIMESTAMP_TRUNC(time_created, DAY) AS day,\nCOUNT(distinct deploy_id) AS deployments\nFROM\nfour_keys.deployments\nWHERE env IN (${environment:doublequote}) AND repo IN (${repository:doublequote})\nGROUP BY day\nORDER BY day",
           "refId": "A",
           "sql": {
             "columns": [
@@ -354,7 +360,7 @@
           }
         }
       ],
-      "title": "Daily Deployments",
+      "title": "日毎のデプロイ回数",
       "type": "timeseries"
     },
     {
@@ -362,7 +368,7 @@
         "type": "grafana-bigquery-datasource",
         "uid": "P8042CABD7873BED6"
       },
-      "description": "",
+      "description": "組織による正常な本番環境へのリリースの頻度",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -425,7 +431,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "9.3.1",
+      "pluginVersion": "10.2.0",
       "targets": [
         {
           "datasource": {
@@ -437,7 +443,7 @@
           "location": "US",
           "project": "gglobo-deployment-frq-hdg-prd",
           "rawQuery": true,
-          "rawSql": "WITH last_three_months AS\n(SELECT\nTIMESTAMP(day) AS day\nFROM\nUNNEST(\nGENERATE_DATE_ARRAY(\n    DATE_SUB(CURRENT_DATE(), INTERVAL 3 MONTH), CURRENT_DATE(),\n    INTERVAL 1 DAY)) AS day\n# FROM the start of the data\nWHERE day > (SELECT date(min(time_created)) FROM four_keys.events_raw)\n)\n\nSELECT\nCASE WHEN daily THEN \"Daily\" \n     WHEN weekly THEN \"Weekly\" \n      # If at least one per month, then Monthly\n     WHEN PERCENTILE_CONT(monthly_deploys, 0.5) OVER () >= 1 THEN  \"Monthly\" \n     ELSE \"Yearly\"\n     END as deployment_frequency\nFROM (\n  SELECT\n  # If the median number of days per week is more than 3, then Daily\n  PERCENTILE_CONT(days_deployed, 0.5) OVER() >= 3 AS daily,\n  # If most weeks have a deployment, then Weekly\n  PERCENTILE_CONT(week_deployed, 0.5) OVER() >= 1 AS weekly,\n\n  # Count the number of deployments per month.  \n  # Cannot mix aggregate and analytic functions, so calculate the median in the outer select statement\n  SUM(week_deployed) OVER(partition by TIMESTAMP_TRUNC(week, MONTH)) monthly_deploys\n  FROM(\n      SELECT\n      TIMESTAMP_TRUNC(last_three_months.day, WEEK) as week,\n      MAX(if(deployments.day is not null, 1, 0)) as week_deployed,\n      COUNT(distinct deployments.day) as days_deployed\n      FROM last_three_months\n      LEFT JOIN(\n        SELECT\n        TIMESTAMP_TRUNC(time_created, DAY) AS day,\n        deploy_id\n        FROM four_keys.deployments) deployments ON deployments.day = last_three_months.day\n      GROUP BY week)\n )\nLIMIT 1",
+          "rawSql": "WITH last_three_months AS\n(SELECT\nTIMESTAMP(day) AS day\nFROM\nUNNEST(\nGENERATE_DATE_ARRAY(\n    DATE_SUB(CURRENT_DATE(), INTERVAL 3 MONTH), CURRENT_DATE(),\n    INTERVAL 1 DAY)) AS day\n# FROM the start of the data\nWHERE day > (SELECT date(min(time_created)) FROM four_keys.events_raw)\n)\n\nSELECT\nCASE WHEN daily THEN \"Daily\" \n     WHEN weekly THEN \"Weekly\" \n      # If at least one per month, then Monthly\n     WHEN PERCENTILE_CONT(monthly_deploys, 0.5) OVER () >= 1 THEN  \"Monthly\" \n     ELSE \"Yearly\"\n     END as deployment_frequency\nFROM (\n  SELECT\n  # If the median number of days per week is more than 3, then Daily\n  PERCENTILE_CONT(days_deployed, 0.5) OVER() >= 3 AS daily,\n  # If most weeks have a deployment, then Weekly\n  PERCENTILE_CONT(week_deployed, 0.5) OVER() >= 1 AS weekly,\n\n  # Count the number of deployments per month.  \n  # Cannot mix aggregate and analytic functions, so calculate the median in the outer select statement\n  SUM(week_deployed) OVER(partition by TIMESTAMP_TRUNC(week, MONTH)) monthly_deploys\n  FROM(\n      SELECT\n      TIMESTAMP_TRUNC(last_three_months.day, WEEK) as week,\n      MAX(if(deployments.day is not null, 1, 0)) as week_deployed,\n      COUNT(distinct deployments.day) as days_deployed\n      FROM last_three_months\n      LEFT JOIN(\n        SELECT\n        TIMESTAMP_TRUNC(time_created, DAY) AS day,\n        deploy_id\n        FROM four_keys.deployments\n        WHERE env IN (${environment:doublequote}) AND repo IN (${repository:doublequote})\n      ) deployments ON deployments.day = last_three_months.day\n      GROUP BY week)\n )\nLIMIT 1",
           "refId": "A",
           "sql": {
             "columns": [
@@ -458,7 +464,7 @@
           }
         }
       ],
-      "title": "Deployment Frequency",
+      "title": "デプロイの頻度",
       "type": "stat"
     },
     {
@@ -466,12 +472,14 @@
         "type": "grafana-bigquery-datasource",
         "uid": "P8042CABD7873BED6"
       },
+      "description": "組織が本番環境での障害から回復するのにかかる時間",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "Hours",
@@ -485,6 +493,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -569,7 +578,7 @@
           }
         }
       ],
-      "title": "Daily Median Time to Restore Services",
+      "title": "日毎のサービス復元時間(中央値)",
       "type": "timeseries"
     },
     {
@@ -577,7 +586,7 @@
         "type": "grafana-bigquery-datasource",
         "uid": "P8042CABD7873BED6"
       },
-      "description": "",
+      "description": "組織が本番環境での障害から回復するのにかかる時間",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -643,7 +652,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "9.3.1",
+      "pluginVersion": "10.2.0",
       "targets": [
         {
           "datasource": {
@@ -676,7 +685,7 @@
           }
         }
       ],
-      "title": "Median Time to Restore Services",
+      "title": "サービス復元時間(中央値)",
       "type": "stat"
     },
     {
@@ -684,14 +693,17 @@
         "type": "grafana-bigquery-datasource",
         "uid": "P8042CABD7873BED6"
       },
+      "description": "デプロイが原因で本番環境で障害が発生する割合（%）",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
+            "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -702,6 +714,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -765,7 +778,7 @@
           "location": "US",
           "project": "gglobo-deployment-frq-hdg-prd",
           "rawQuery": true,
-          "rawSql": "SELECT\nTIMESTAMP_TRUNC(d.time_created, DAY) as day,\n  IF(COUNT(DISTINCT change_id) = 0,0, SUM(IF(i.incident_id is NULL, 0, 1)) / COUNT(DISTINCT deploy_id)) as change_fail_rate\nFROM four_keys.deployments d, d.changes\nLEFT JOIN four_keys.changes c ON changes = c.change_id\nLEFT JOIN(SELECT\n        DISTINCT incident_id,\n        change,\n        time_resolved\n        FROM four_keys.incidents i,\n        i.changes change) i ON i.change = changes\nGROUP BY day",
+          "rawSql": "SELECT\nTIMESTAMP_TRUNC(d.time_created, DAY) as day,\n  IF(COUNT(DISTINCT change_id) = 0,0, SUM(IF(i.incident_id is NULL, 0, 1)) / COUNT(DISTINCT deploy_id)) as change_fail_rate\nFROM four_keys.deployments d, d.changes\nLEFT JOIN four_keys.changes c ON changes = c.change_id\nLEFT JOIN(SELECT\n        DISTINCT incident_id,\n        change,\n        time_resolved\n        FROM four_keys.incidents i,\n        i.changes change) i ON i.change = changes\nWHERE d.env IN (${environment:doublequote}) AND d.repo IN (${repository:doublequote})\nGROUP BY day",
           "refId": "A",
           "sql": {
             "columns": [
@@ -786,7 +799,7 @@
           }
         }
       ],
-      "title": "Daily Change Failure Rate",
+      "title": "日毎の変更障害率",
       "type": "timeseries"
     },
     {
@@ -794,7 +807,7 @@
         "type": "grafana-bigquery-datasource",
         "uid": "P8042CABD7873BED6"
       },
-      "description": "",
+      "description": "デプロイが原因で本番環境で障害が発生する割合（%）",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -852,7 +865,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "9.3.1",
+      "pluginVersion": "10.2.0",
       "targets": [
         {
           "datasource": {
@@ -864,7 +877,7 @@
           "location": "US",
           "project": "gglobo-deployment-frq-hdg-prd",
           "rawQuery": true,
-          "rawSql": "SELECT\nCASE WHEN change_fail_rate <= .15 then \"0-15%\"\n     WHEN change_fail_rate < .46 then \"16-45%\"\n     ELSE \"46-60%\" end as change_fail_rate\nFROM \n (SELECT\n    IF(COUNT(DISTINCT change_id) = 0,0, SUM(IF(i.incident_id is NULL, 0, 1)) / COUNT(DISTINCT deploy_id)) as change_fail_rate\n  FROM four_keys.deployments d, d.changes\n  LEFT JOIN four_keys.changes c ON changes = c.change_id\n  LEFT JOIN(SELECT\n          incident_id,\n          change,\n          time_resolved\n          FROM four_keys.incidents i,\n          i.changes change) i ON i.change = changes\n  # Limit to 3 months\n  WHERE d.time_created > TIMESTAMP(DATE_SUB(CURRENT_DATE(), INTERVAL 3 MONTH))\n  )\nLIMIT 1",
+          "rawSql": "SELECT\nCASE WHEN change_fail_rate <= .15 then \"0-15%\"\n     WHEN change_fail_rate < .46 then \"16-45%\"\n     ELSE \"46-60%\" end as change_fail_rate\nFROM \n (SELECT\n    IF(COUNT(DISTINCT change_id) = 0,0, SUM(IF(i.incident_id is NULL, 0, 1)) / COUNT(DISTINCT deploy_id)) as change_fail_rate\n  FROM four_keys.deployments d, d.changes\n  LEFT JOIN four_keys.changes c ON changes = c.change_id\n  LEFT JOIN(SELECT\n          incident_id,\n          change,\n          time_resolved\n          FROM four_keys.incidents i,\n          i.changes change) i ON i.change = changes\n  # Limit to 3 months\n  WHERE d.time_created > TIMESTAMP(DATE_SUB(CURRENT_DATE(), INTERVAL 3 MONTH))\n  AND d.env IN (${environment:doublequote}) AND d.repo IN (${repository:doublequote})\n  )\nLIMIT 1",
           "refId": "A",
           "sql": {
             "columns": [
@@ -885,20 +898,172 @@
           }
         }
       ],
-      "title": "Change Failure Rate",
+      "title": "変更障害率",
       "type": "stat"
     }
   ],
-  "refresh": "",
-  "schemaVersion": 37,
-  "style": "dark",
+  "refresh": false,
+  "schemaVersion": 38,
   "tags": [],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "grafana-bigquery-datasource",
+          "uid": "P8042CABD7873BED6"
+        },
+        "definition": "",
+        "description": "環境",
+        "hide": 0,
+        "includeAll": true,
+        "label": "環境",
+        "multi": true,
+        "name": "environment",
+        "options": [],
+        "query": {
+          "dataset": "four_keys",
+          "editorMode": "builder",
+          "format": 1,
+          "location": "US",
+          "project": "satoshun00-test-fourkeys",
+          "rawQuery": true,
+          "rawSql": "SELECT env FROM `satoshun00-test-fourkeys.four_keys.deployments` WHERE env IS NOT NULL LIMIT 50 ",
+          "refId": "tempvar",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [
+                  {
+                    "name": "env",
+                    "type": "functionParameter"
+                  }
+                ],
+                "type": "function"
+              }
+            ],
+            "groupBy": [],
+            "limit": 50,
+            "whereJsonTree": {
+              "children1": [
+                {
+                  "id": "8bbbbba8-89ab-4cde-b012-318bbfbba4a0",
+                  "properties": {
+                    "field": "env",
+                    "fieldSrc": "field",
+                    "operator": "is_not_null",
+                    "value": [],
+                    "valueSrc": [],
+                    "valueType": []
+                  },
+                  "type": "rule"
+                }
+              ],
+              "id": "88bb889a-0123-4456-b89a-b18bbfb1b53b",
+              "type": "group"
+            },
+            "whereString": "env IS NOT NULL"
+          },
+          "table": "deployments"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "grafana-bigquery-datasource",
+          "uid": "P8042CABD7873BED6"
+        },
+        "definition": "",
+        "description": "リポジトリ",
+        "hide": 0,
+        "includeAll": true,
+        "label": "リポジトリ",
+        "multi": true,
+        "name": "repository",
+        "options": [],
+        "query": {
+          "dataset": "four_keys",
+          "editorMode": "builder",
+          "format": 1,
+          "location": "US",
+          "project": "satoshun00-test-fourkeys",
+          "rawSql": "SELECT repo FROM `satoshun00-test-fourkeys.four_keys.changes` WHERE repo IS NOT NULL LIMIT 50 ",
+          "refId": "tempvar",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [
+                  {
+                    "name": "repo",
+                    "type": "functionParameter"
+                  }
+                ],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50,
+            "whereJsonTree": {
+              "children1": [
+                {
+                  "id": "898a89a9-4567-489a-bcde-f18bbfc094fc",
+                  "properties": {
+                    "field": "repo",
+                    "fieldSrc": "field",
+                    "operator": "is_not_null",
+                    "value": [],
+                    "valueSrc": [],
+                    "valueType": []
+                  },
+                  "type": "rule"
+                }
+              ],
+              "id": "88bb889a-0123-4456-b89a-b18bbfb1b53b",
+              "type": "group"
+            },
+            "whereString": "repo IS NOT NULL"
+          },
+          "table": "changes"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
   },
   "time": {
-    "from": "2022-08-01T03:00:00.000Z",
-    "to": "now"
+    "from": "now-30d",
+    "to": "now+30d"
   },
   "timepicker": {
     "hidden": false,
@@ -931,5 +1096,5 @@
   "title": "Four Keys",
   "uid": "yVtwoQ4nk",
   "version": 2,
-  "weekStart": ""
+  "weekStart": "monday"
 }
