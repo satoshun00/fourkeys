@@ -3,3 +3,5 @@ region = "<REGION>"
 bigquery_region = "<BIGQUERY_REGION>"
 parsers = ["<PARSER>", "<PARSER>"]
 forkeys_repo = "<ORG/REPO>"
+domain = "<DOMAIN>"
+workspace = "<WORKSPACE>"

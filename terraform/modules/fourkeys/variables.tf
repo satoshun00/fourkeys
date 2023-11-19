@@ -83,3 +83,8 @@ variable "pagerduty_parser_url" {
   description = "The URL for the Pager Duty parser container image. A default value pointing to the project's artifact registry  is defined in under local values of this module."
   default     = ""
 }
+
+variable "domain" {
+  type        = string
+  description = "The domain to use for the dashboard."
+}

@@ -15,6 +15,8 @@ endef
 
 init:
 	$(call tf, -chdir=./example init)
+fmt:
+	$(call tf, -chdir=./example fmt)
 plan:
 	$(call tf, -chdir=./example plan)
 apply:

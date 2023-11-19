@@ -1,10 +1,11 @@
 module "fourkeys" {
-  source              = "../modules/fourkeys"
-  project_id          = var.project_id
-  enable_apis         = var.enable_apis
-  region              = var.region
-  bigquery_region     = var.bigquery_region
-  parsers             = var.parsers
+  source          = "../modules/fourkeys"
+  project_id      = var.project_id
+  enable_apis     = var.enable_apis
+  region          = var.region
+  bigquery_region = var.bigquery_region
+  parsers         = var.parsers
+  domain          = var.domain
 }
 
 module "github_actions_runner" {
@@ -36,4 +37,17 @@ module "github_oidc" {
       attribute = "attribute.repository/${var.forkeys_repo}"
     }
   }
+}
+
+module "dashboard_iap_lb" {
+  source                 = "../modules/dashboard-iap-lb"
+  project_id             = var.project_id
+  region                 = var.region
+  cloud_run_service_name = module.fourkeys.cloud_run_dashboard_name
+  domain                 = var.domain
+  workspace              = var.workspace
+}
+
+output "dashboard_ip" {
+  value = module.dashboard_iap_lb.external_ip
 }

@@ -1,6 +1,6 @@
 variable "project_id" {
-    type    = string
-    description = "project to deploy four keys resources to"
+  type        = string
+  description = "project to deploy four keys resources to"
 }
 
 variable "enable_apis" {
@@ -10,9 +10,9 @@ variable "enable_apis" {
 }
 
 variable "region" {
-    type = string
-    default = "us-central1"
-    description = "Region to deploy four keys resources in."
+  type        = string
+  default     = "us-central1"
+  description = "Region to deploy four keys resources in."
 }
 
 variable "bigquery_region" {
@@ -51,4 +51,14 @@ variable "parser_container_urls" {
 variable "forkeys_repo" {
   type        = string
   description = "Path for the forkeys repo. (e.g. org/repo)"
+}
+
+variable "domain" {
+  type        = string
+  description = "Domain to use for the dashboard."
+}
+
+variable "workspace" {
+  type        = string
+  description = "The workspace domain authorized for login."
 }
