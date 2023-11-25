@@ -2,6 +2,7 @@
 
 * Container RegistryではなくArtifact Registryを使用するように変更
 * terraformをdockerコンテナーで実行するように変更(see: /terraform/makefile)
+* Datadog用のパーサーを追加
 
 ### Artifact Registryのリポジトリをdashboardとevent-handler、parsers向けに作成します
 
@@ -10,7 +11,8 @@ export GAR_REGION=asia-northeast1
 
 gcloud artifacts repositories create dashboard --repository-format=docker --location=$GAR_REGION --project $PROJECT_ID && \
 gcloud artifacts repositories create event-handler --repository-format=docker --location=$GAR_REGION --project $PROJECT_ID && \
-gcloud artifacts repositories create github-parser --repository-format=docker --location=$GAR_REGION --project $PROJECT_ID
+gcloud artifacts repositories create github-parser --repository-format=docker --location=$GAR_REGION --project $PROJECT_ID && \
+gcloud artifacts repositories create datadog-parser --repository-format=docker --location=$GAR_REGION --project $PROJECT_ID
 ```
 
 ### `gcloud builds submit` でArtifact Registryのregionを指定するように変更します
@@ -29,6 +31,7 @@ gcloud artifacts repositories create github-parser --repository-format=docker --
 
 - gcloud builds submit bq-workers --config=bq-workers/parsers.cloudbuild.yaml --project $PROJECT_ID --substitutions=_SERVICE=github
 + gcloud builds submit bq-workers --config=bq-workers/parsers.cloudbuild.yaml --project $PROJECT_ID --substitutions=_SERVICE=github,_REGION=$GAR_REGION
++ gcloud builds submit bq-workers --config=bq-workers/parsers.cloudbuild.yaml --project $PROJECT_ID --substitutions=_SERVICE=datadog,_REGION=$GAR_REGION
 ```
 
 ### terraformの実行手順を以下のように変更します
@@ -36,6 +39,24 @@ gcloud artifacts repositories create github-parser --repository-format=docker --
 * `terraform init` → `make init`
 * `terraform plan` → `make plan`
 * `terraform apply` → `make apply`
+
+### Datadogのパーサーを使用する場合
+
+[DatadogのWebhookインテグレーション設定](https://ap1.datadoghq.com/integrations?integrationId=webhooks)を以下のペイロードで作成してください
+
+```json
+{
+    "id": "$ID",
+    "date": $DATE,
+    "incident_id": "$INCIDENT_PUBLIC_ID",
+    "title": "$INCIDENT_TITLE",
+    "url": "$INCIDENT_URL",
+    "status": "$INCIDENT_STATUS",
+    "severity": "$INCIDENT_SEVERITY",
+    "body": "$INCIDENT_MSG",
+    "fields": $INCIDENT_FIELDS
+}
+```
 
 -----
 

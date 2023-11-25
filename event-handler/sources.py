@@ -145,6 +145,9 @@ def get_source(headers):
     if "X-Pagerduty-Signature" in headers:
         return "pagerduty"
 
+    if "X-Datadog-Secret" in headers:
+        return "datadog"
+
     return headers.get("User-Agent")
 
 
@@ -163,5 +166,8 @@ AUTHORIZED_SOURCES = {
         ),
     "pagerduty": EventSource(
         "X-Pagerduty-Signature", pagerduty_verification
+        ),
+    "datadog": EventSource(
+        "X-Datadog-Secret", simple_token_verification
         ),
 }

@@ -80,6 +80,12 @@ variable "circleci_parser_url" {
 
 variable "pagerduty_parser_url" {
   type        = string
+  description = "The URL for the Datadog parser container image. A default value pointing to the project's artifact registry  is defined in under local values of this module."
+  default     = ""
+}
+
+variable "datadog_parser_url" {
+  type        = string
   description = "The URL for the Pager Duty parser container image. A default value pointing to the project's artifact registry  is defined in under local values of this module."
   default     = ""
 }

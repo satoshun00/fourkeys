@@ -11,7 +11,7 @@ jobs:
   deploy:
     strategy:
       matrix:
-        parser: ["github"]
+        parser: ["github", "datadog"]
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -12,6 +12,7 @@ locals {
   tekton_parser_url           = var.tekton_parser_url == "" ? format("%s-docker.pkg.dev/%s/tekton-parser/parser", var.region, var.project_id) : var.tekton_parser_url
   circleci_parser_url         = var.circleci_parser_url == "" ? format("%s-docker.pkg.dev/%s/circleci-parser/parser", var.region, var.project_id) : var.circleci_parser_url
   pagerduty_parser_url        = var.pagerduty_parser_url == "" ? format("%s-docker.pkg.dev/%s/pagerduty-parser/parser", var.region, var.project_id) : var.pagerduty_parser_url
+  datadog_parser_url          = var.datadog_parser_url == "" ? format("%s-docker.pkg.dev/%s/datadog-parser/parser", var.region, var.project_id) : var.pagerduty_parser_url
   services = var.enable_apis ? [
     "bigquery.googleapis.com",
     "cloudbuild.googleapis.com",
