@@ -1,4 +1,4 @@
-# Copyright 2021 Google LLC
+# Copyright 2020 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,19 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM grafana/grafana
+steps:
+- # Build datadog-parser image
+  name: gcr.io/cloud-builders/docker:latest
+  args: ['build', 
+         '--tag=gcr.io/$PROJECT_ID/datadog-parser:${_TAG}', '.']
+  id: build
 
-# during setup, this variable will be configured onto the Cloud Run service
-# (default here to "US" as a fallback)
-ENV BQ_REGION "US"
+- # Push the container image to Container Registry
+  name: gcr.io/cloud-builders/docker
+  args: ['push', 'gcr.io/$PROJECT_ID/datadog-parser:${_TAG}']
+  waitFor: ['build']
+  id: push
 
-# Setting grafana config
-COPY grafana.ini /etc/grafana
-
-# Provisioning dashboards and datasources
-COPY fourkeys_dashboard.json /etc/grafana/dashboards/
-COPY dashboards.yaml /etc/grafana/provisioning/dashboards
-COPY datasource.yaml /etc/grafana/provisioning/datasources
-
-# Installing the BigQuery Plugin
-RUN grafana-cli plugins install grafana-bigquery-datasource
+images: [
+  'gcr.io/$PROJECT_ID/datadog-parser:${_TAG}'
+]

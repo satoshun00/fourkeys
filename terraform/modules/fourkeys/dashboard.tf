@@ -15,6 +15,50 @@ resource "google_cloud_run_service" "dashboard" {
           name  = "PROJECT_NAME"
           value = var.project_id
         }
+        env {
+          name  = "GF_SERVER_ROOT_URL"
+          value = "https://${var.domain}"
+        }
+        env {
+          name  = "GF_AUTH_JWT_ENABLED"
+          value = "true"
+        }
+        env {
+          name  = "GF_AUTH_JWT_HEADER_NAME"
+          value = "X-Goog-Iap-Jwt-Assertion"
+        }
+        env {
+          name  = "GF_AUTH_JWT_USERNAME_CLAIM"
+          value = "email"
+        }
+        env {
+          name  = "GF_AUTH_JWT_EMAIL_CLAIM"
+          value = "email"
+        }
+        env {
+          name  = "GF_AUTH_JWT_JWK_SET_URL"
+          value = "https://www.gstatic.com/iap/verify/public_key-jwk"
+        }
+        env {
+          name  = "GF_AUTH_JWT_EXPECTED_CLAIMS"
+          value = "{\"iss\": \"https://cloud.google.com/iap\"}"
+        }
+        env {
+          name  = "GF_AUTH_JWT_AUTO_SIGN_UP"
+          value = "true"
+        }
+        env {
+          name = "GF_USERS_AUTO_ASSIGN_ORG_ROLE"
+          value = "Viewer"
+        }
+        env {
+          name = "GF_USERS_VIEWERS_CAN_EDIT"
+          value = "true"
+        }
+        env {
+          name = "GF_USERS_EDITORS_CAN_ADMIN"
+          value = "false"
+        }
       }
       service_account_name = google_service_account.fourkeys.email
     }
@@ -33,13 +77,6 @@ resource "google_cloud_run_service" "dashboard" {
   ]
 }
 
-resource "google_cloud_run_service_iam_binding" "dashboard_noauth" {
-  count    = var.enable_dashboard ? 1 : 0
-  location = var.region
-  project  = var.project_id
-  service  = "fourkeys-grafana-dashboard"
-
-  role       = "roles/run.invoker"
-  members    = ["allUsers"]
-  depends_on = [google_cloud_run_service.dashboard]
+output "cloud_run_dashboard_name" {
+  value = google_cloud_run_service.dashboard.0.name
 }
